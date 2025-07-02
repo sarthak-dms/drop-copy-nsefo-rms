@@ -4,20 +4,12 @@ import { Wifi, WifiOff, AlertTriangle, CheckCircle, Clock, Database } from 'luci
 import { useSocket } from '../../hooks/useSocket';
 
 const StatusBar = () => {
-    // const statusData = {
-    //     isConnected: true,
-    //     noOfErrs: 3,
-    //     noOfScriptsMapped: 2,
-    //     lastRcvdTime: '12:00:00',
-    //     dbStatus: 'healthy',
-    //     uptime: '99.8%'
-    // };
     const {
-            connectionStatus,
-        } = useSocket();
+        connectionStatus,
+    } = useSocket();
 
     return (
-        <footer className="fixed bottom-0 left-0 right-0 bg-gray-200/40 border-t border-gray-200 shadow-lg z-50">
+        <footer className="fixed bottom-0 left-0 right-0 bg-light-secondary dark:bg-gray-400 shadow-lg z-100">
             <div className="px-6 py-3">
                 <div className="flex items-center justify-between mx-auto">
                     <div className="flex items-center space-x-4">
@@ -52,7 +44,7 @@ const StatusBar = () => {
                         <div className="flex items-center space-x-2">
                             <CheckCircle className="h-4 w-4 text-blue-500" />
                             <span className="text-sm font-medium text-gray-700">NoOfScriptsMapped:</span>
-                            {/* <span className="text-sm font-semibold text-gray-900">{connectionStatus.noOfScriptsMapped.toLocaleString()}</span> */}
+                            <span className="text-sm font-semibold text-gray-900">{connectionStatus.noOfScriptsMapped}</span>
                         </div>
 
                         <Divider type="vertical" className="h-6" />

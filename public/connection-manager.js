@@ -10,7 +10,7 @@ class ConnectionManager {
         this.connectionStatus = false;
         this.clientSocket = null;
         this.totalNoOfErrs = 0;
-        this.lastRcvTime = '';
+        this.lastRcvTime = '00:00:00';
         this.noOfScriptsMapped = 0;
         this.sendLoopInterval = null;
         
@@ -98,6 +98,7 @@ class ConnectionManager {
                 sendBuffer.writeInt16BE(transCode, 2);
                 msgBytes.copy(sendBuffer, 4);
 
+                this.addLogs(`Sending message: ${message}`);
                 this.clientSocket.write(sendBuffer);
             }
         } catch (ex) {
@@ -160,6 +161,7 @@ class ConnectionManager {
                     this.totalNoOfErrs += 1;
                     this.addLogs("[ReceiveMessage Data] Exception: " + ex.toString());
                     this.notifyError(ex.toString());
+                    this.notifyStatusChange();
                 }
             });
 
@@ -188,9 +190,11 @@ class ConnectionManager {
 
             const now = new Date();
             this.lastRcvTime = now.toTimeString().split(' ')[0];
+            this.notifyStatusChange();
 
             const tcode = pkt.readInt16BE(2);
-            const newPkt = pkt.toString('utf8', 4, pktlen);
+            // const newPkt = pkt.toString('utf8', 4, pktlen);
+            const newPkt = pkt.slice(2).toString('utf8');
 
             // Notify React about received message
             this.notifyMessage({
@@ -203,6 +207,7 @@ class ConnectionManager {
             this.totalNoOfErrs += 1;
             this.addLogs("[ProcessPacket] Exception: " + ex.toString());
             this.notifyError(ex.toString());
+            this.notifyStatusChange();
         }
     }
 

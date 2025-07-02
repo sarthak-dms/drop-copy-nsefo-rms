@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Ag-Grid Modules
 import {
@@ -13,6 +14,7 @@ import {
     RowSelectionModule,
     ValidationModule,
     ScrollApiModule,
+    RowStyleModule,
 } from 'ag-grid-community';
 import {
     ColumnMenuModule,
@@ -23,6 +25,7 @@ import {
     TextEditorModule, // ✅ Text Editing
     NumberEditorModule, // ✅ Number Editing
 } from 'ag-grid-enterprise';
+import { Row } from 'antd';
 
 // Register ag-Grid Modules
 ModuleRegistry.registerModules([
@@ -40,11 +43,14 @@ ModuleRegistry.registerModules([
     ScrollApiModule,
     TextEditorModule,
     NumberEditorModule,
+    RowStyleModule,
 ]);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );

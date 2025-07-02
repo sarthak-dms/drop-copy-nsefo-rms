@@ -1,17 +1,23 @@
-import React, { useCallback, useMemo, useState, StrictMode } from "react";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { AgGridReact } from 'ag-grid-react';
 import { themeQuartz } from 'ag-grid-community';
+import { useSocket } from "../hooks/useSocket";
+import { useTheme } from '../context/ThemeContext.jsx';
 
 const NetPosition = () => {
-    const containerStyle = useMemo(() => ({ width: "100%", height: "100%" }), []);
+    const gridRef = useRef(null);
+    const { theme } = useTheme();
+    const [rowData, setRowData] = useState([]);
+    const containerStyle = useMemo(() => ({ width: "100%", height: "90%" }), []);
     const gridStyle = useMemo(() => ({ height: "100%", width: "100%" }), []);
-    const theme = "light";
+
+    const { messages, connectionStatus } = useSocket();
 
     const myTheme = themeQuartz.withParams({
         spacing: 5,
         rowBorder: true,
         wrapperBorder: true,
-        wrapperBorderRadius: '0 0 8px 8px',
+        wrapperBorderRadius: '0',
 
         foregroundColor: theme === 'dark' ? '#F5F6F6' : '#282A2C',
         backgroundColor: theme === 'dark' ? '#191B1C' : '#FFFFFF',
@@ -25,121 +31,53 @@ const NetPosition = () => {
     const defaultColDef = useMemo(() => {
         return {
             flex: 1,
+            enableCellChangeFlash: true
         };
     }, []);
 
     const [columnDefs, setColumnDefs] = useState([
         { field: "BaseScriptName", cellRenderer: "agGroupCellRenderer" },
-        { field: "ScriptSummary" },
+        { field: "BaseScriptSummary" },
     ]);
 
     const detailCellRendererParams = useMemo(() => {
         return {
+            refreshStrategy: "rows",
             detailGridOptions: {
                 columnDefs: [
-                    { field: "FullScriptName" },
-                    { field: "InsType" },
-                    { field: "Strike" },
-                    { field: "OpType" },
-                    { field: "Exp" },
-                    { field: "BLots" },
-                    { field: "BAvg" },
-                    { field: "SLots" },
-                    { field: "SAvg" },
-                    { field: "NLots" },
-                    { field: "NAvg" },
-                    { field: "CarryForwardLts" },
-                    { field: "CombinedNetLts" },
-                    { field: "M2M" },
+                    { field: "FullScriptName", minWidth: 250 },
+                    { field: "InsType", minWidth: 70 },
+                    { field: "Strike", minWidth: 120 },
+                    { field: "OpType", minWidth: 70 },
+                    { field: "Expiry", minWidth: 80 },
+                    { field: "BLots", minWidth: 70 },
+                    { field: "BAvg", minWidth: 100 },
+                    { field: "SLots", minWidth: 70 },
+                    { field: "SAvg", minWidth: 100 },
+                    { field: "NLots", minWidth: 70 },
+                    { field: "NAvg", minWidth: 100 },
+                    { field: "CarryForwardLts", minWidth: 80 },
+                    { field: "CombinedNetLts", minWidth: 80 },
+                    { field: "M2M", minWidth: 100 },
                 ],
                 defaultColDef: {
                     flex: 1,
+                    enableCellChangeFlash: true,
+                },
+                getRowId: (params) => {
+                    return String(params.data.FullScriptName);
                 },
             },
+
             getDetailRowData: (params) => {
                 params.successCallback(params.data.childScripts);
             },
         };
     }, []);
 
-    const [data, setData] = useState([
-        {
-            "BaseScriptName": "NIFTY",
-            "ScriptSummary": "All Hedged",
-            "childScripts": [
-                {
-                    "FullScriptName": "NIFTY2413270000CE",
-                    "InsType": "OPTIDX",
-                    "Strike": 27000,
-                    "OpType": "CE",
-                    "Exp": "27-JUN-2024",
-                    "BLots": 2,
-                    "BAvg": 120.5,
-                    "SLots": 0,
-                    "SAvg": 0,
-                    "NLots": 2,
-                    "NAvg": 120.5,
-                    "CarryForwardLts": 0,
-                    "CombinedNetLts": 2,
-                    "M2M": 4500
-                },
-                {
-                    "FullScriptName": "NIFTY2413270000PE",
-                    "InsType": "OPTIDX",
-                    "Strike": 27000,
-                    "OpType": "PE",
-                    "Exp": "27-JUN-2024",
-                    "BLots": 0,
-                    "BAvg": 0,
-                    "SLots": 2,
-                    "SAvg": 110.0,
-                    "NLots": -2,
-                    "NAvg": 110.0,
-                    "CarryForwardLts": -1,
-                    "CombinedNetLts": -3,
-                    "M2M": -2300
-                },
-            ]
-        },
-        {
-            "BaseScriptName": "BANKNIFTY",
-            "ScriptSummary": "***Unhedged***",
-            "childScripts": [
-                {
-                    "FullScriptName": "BANKNIFTY2413270000CE",
-                    "InsType": "OPTIDX",
-                    "Strike": 27000,
-                    "OpType": "CE",
-                    "Exp": "27-JUN-2024",
-                    "BLots": 1,
-                    "BAvg": 250.0,
-                    "SLots": 0,
-                    "SAvg": 0,
-                    "NLots": 1,
-                    "NAvg": 250.0,
-                    "CarryForwardLts": 0,
-                    "CombinedNetLts": 1,
-                    "M2M": 1200
-                },
-                {
-                    "FullScriptName": "BANKNIFTY2413270000PE",
-                    "InsType": "OPTIDX",
-                    "Strike": 27000,
-                    "OpType": "PE",
-                    "Exp": "27-JUN-2024",
-                    "BLots": 0,
-                    "BAvg": 0,
-                    "SLots": 1,
-                    "SAvg": 240.0,
-                    "NLots": -1,
-                    "NAvg": 240.0,
-                    "CarryForwardLts": 0,
-                    "CombinedNetLts": -1,
-                    "M2M": -800
-                },
-            ]
-        },
-    ]);
+    const getRowId = useCallback(function (params) {
+        return String(params.data.BaseScriptName);
+    }, []);
 
     const getRowStyle = (params) => {
         if (params.node.rowIndex % 2 === 0) {
@@ -147,16 +85,65 @@ const NetPosition = () => {
         }
     };
 
+    useEffect(() => {
+        const rowsToUpdate = [];
+        const rowsToAdd = [];
+
+        const newData = rowData.map(item => ({ ...item, childScripts: [...item.childScripts] }));
+
+        messages.forEach((message) => {
+            const netPosRow = message;
+            console.log('Received message:', netPosRow);
+            const baseScrIdx = newData.findIndex(item => item.BaseScriptName === netPosRow.BaseScriptName);
+
+            if (baseScrIdx > -1) {
+                // Update existing row
+                const updatedRow = newData[baseScrIdx];
+
+                const childIdx = updatedRow.childScripts.findIndex(child => child.FullScriptName === netPosRow.FullScriptName);
+                if (childIdx > -1) {
+                    updatedRow.childScripts[childIdx] = netPosRow;
+                } else {
+                    updatedRow.childScripts.push(netPosRow);
+                }
+
+                rowsToUpdate.push(updatedRow);
+            } else {
+                const newRow = {
+                    BaseScriptName: netPosRow.BaseScriptName,
+                    BaseScriptSummary: "All Hedged",
+                    childScripts: [netPosRow]
+                };
+                newData.push(newRow);
+                rowsToAdd.push(newRow);
+                connectionStatus.noOfScriptsMapped += 1;
+            }
+        });
+
+        // Update React state
+        setRowData(newData);
+
+        // Apply transactions to ag-Grid
+        if (gridRef.current) {
+            if (rowsToUpdate.length > 0) {
+                gridRef.current.api.applyTransaction({ update: rowsToUpdate });
+            }
+            if (rowsToAdd.length > 0) {
+                gridRef.current.api.applyTransaction({ add: rowsToAdd });
+            }
+        }
+    }, [messages]);
+
     return (
         <div style={containerStyle}>
             <div style={gridStyle}>
                 <AgGridReact
                     masterDetail={true}
                     detailRowAutoHeight={true}
-                    // ref={gridRef}
+                    ref={gridRef}
                     theme={myTheme}
-                    rowData={data}
-                    // getRowId={getRowId}
+                    rowData={rowData}
+                    getRowId={getRowId}
                     getRowStyle={getRowStyle}
                     columnDefs={columnDefs}
                     defaultColDef={defaultColDef}

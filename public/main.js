@@ -1,11 +1,15 @@
-const { BrowserWindow, app, ipcMain } = require('electron');
-const path = require('path');
-const ConnectionManager = require('./connection-manager');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import { initialize } from '@electron/remote/main/index.js';
+import { fileURLToPath } from 'url';
+import ConnectionManager from './connection-manager.js';
 
-require('@electron/remote/main').initialize();
+initialize();
 
 let mainWindow;
 let connectionManager = null;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 console.log('Starting Electron app...');
 function createWindow() {
@@ -24,7 +28,6 @@ function createWindow() {
 
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
-    console.log('mainWindow created', mainWindow);
 }
 
 app.on('ready', createWindow);
@@ -39,7 +42,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
+    console.log('app on activate');
     if (BrowserWindow.getAllWindows().length === 0) {
+        console.log('going to call createWindow');
         createWindow();
     }
 });
@@ -51,7 +56,8 @@ app.on('activate', () => {
 
 // Initialize connection
 ipcMain.handle('socket-init', async (event, { ip, port }) => {
-    console.log('[socket-init] Going to create new connection', connectionManager);
+    // console.log('[socket-init] Going to create new connection', connectionManager);
+    console.log('[socket-init] Imported connection manager class: ', ConnectionManager);
     try {
         if (connectionManager) {
             connectionManager.disconnect();
