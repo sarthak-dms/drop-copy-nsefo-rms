@@ -30,8 +30,10 @@ export const useSocket = () => {
 
             if (fullScr.endsWith("CE") || fullScr.endsWith("PE")) {
                 objNposPkt.OpType = fullScr.slice(-2);
+                objNposPkt.InsType = "OPT";
             } else {
                 objNposPkt.OpType = "XX";
+                objNposPkt.InsType = "FUT";
             }
 
             if (objNposPkt.OpType !== "XX") {
@@ -101,8 +103,6 @@ export const useSocket = () => {
                         SAvg: totalSLots > 0 ? parseFloat((originalSAvg * originalSLots) + (newSAvg * newSLots)) / totalSLots : 0,
                         NLots: totalNLots,
                         NAvg: totalNLots > 0 ? parseFloat((originalNAvg * originalNLots) + (newNAvg * newNLots)) / totalNLots : 0,
-                        // Add any other fields from objNposPkt that should be updated (not calculated)
-                        // LastUpdateTime: objNposPkt.LastUpdateTime, // example
                     };
                     return updatedMessages;
                 }

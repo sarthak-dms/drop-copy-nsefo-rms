@@ -4,7 +4,7 @@ import { themeQuartz } from 'ag-grid-community';
 import { useSocket } from "../hooks/useSocket";
 import { useTheme } from '../context/ThemeContext.jsx';
 
-const NetPosition = () => {
+const NetPosition = ({ setBaseScripts }) => {
     const gridRef = useRef(null);
     const { theme } = useTheme();
     const [rowData, setRowData] = useState([]);
@@ -14,7 +14,7 @@ const NetPosition = () => {
     const { messages, connectionStatus } = useSocket();
 
     const myTheme = themeQuartz.withParams({
-        spacing: 5,
+        spacing: 4,
         rowBorder: true,
         wrapperBorder: true,
         wrapperBorderRadius: '0',
@@ -38,6 +38,9 @@ const NetPosition = () => {
     const [columnDefs, setColumnDefs] = useState([
         { field: "BaseScriptName", cellRenderer: "agGroupCellRenderer" },
         { field: "BaseScriptSummary" },
+        { field: "CallLots" },
+        { field: "PutLots" },
+        { field: "FutureLots" },
     ]);
 
     const detailCellRendererParams = useMemo(() => {
@@ -80,32 +83,54 @@ const NetPosition = () => {
     }, []);
 
     const getRowStyle = (params) => {
+        // console.log("params: ", params);
+        const style = {};
+
         if (params.node.rowIndex % 2 === 0) {
-            return { background: theme === 'dark' ? '#282A2C' : '#EEF2FE' };
+            style.background = theme === 'dark' ? '#3b82f633' : '#EEF2FE';
         }
+        
+        if (params.data.BaseScriptSummary?.startsWith("***UnHedged***")) {
+            style.color = theme === 'dark' ? '#F87171' : '#B91C1C';
+        }
+
+        return style;
     };
 
     useEffect(() => {
         const rowsToUpdate = [];
         const rowsToAdd = [];
 
-        const newData = rowData.map(item => ({ ...item, childScripts: [...item.childScripts] }));
+        const newData = rowData.map(item => ({ ...item, childScripts: [...item.childScripts] }));   // Deep copy of rowData
 
         messages.forEach((message) => {
             const netPosRow = message;
-            console.log('Received message:', netPosRow);
             const baseScrIdx = newData.findIndex(item => item.BaseScriptName === netPosRow.BaseScriptName);
 
             if (baseScrIdx > -1) {
                 // Update existing row
                 const updatedRow = newData[baseScrIdx];
 
-                const childIdx = updatedRow.childScripts.findIndex(child => child.FullScriptName === netPosRow.FullScriptName);
+                const childScripts = updatedRow.childScripts || [];
+                const childIdx = childScripts.findIndex(child => child.FullScriptName === netPosRow.FullScriptName);
+
                 if (childIdx > -1) {
                     updatedRow.childScripts[childIdx] = netPosRow;
                 } else {
                     updatedRow.childScripts.push(netPosRow);
                 }
+
+                const hedgeStatus = checkHedgedStatus(childScripts);
+
+                if (hedgeStatus.isPosUnhedged) {
+                    updatedRow.BaseScriptSummary = "***UnHedged***" + " " + hedgeStatus.unhedgedSummary;
+                } else {
+                    updatedRow.BaseScriptSummary = "All Hedged";
+                }
+
+                updatedRow.CallLots = hedgeStatus.sumOfAllCeLots;
+                updatedRow.PutLots = hedgeStatus.sumOfAllPeLots;
+                updatedRow.FutureLots = hedgeStatus.futureLots;
 
                 rowsToUpdate.push(updatedRow);
             } else {
@@ -119,8 +144,6 @@ const NetPosition = () => {
                 connectionStatus.noOfScriptsMapped += 1;
             }
         });
-
-        // Update React state
         setRowData(newData);
 
         // Apply transactions to ag-Grid
@@ -133,6 +156,61 @@ const NetPosition = () => {
             }
         }
     }, [messages]);
+
+
+    const checkHedgedStatus = (childScripts) => {
+        let unhedgedSummary = "";
+        let isPosUnhedged = false;
+        let futureLots = 0;
+        let sumOfAllCeLots = 0;
+        let sumOfAllPeLots = 0;
+
+        const optionQtySum = {}
+
+        childScripts.forEach(script => {
+            if (script.InsType === "FUT") {
+                futureLots += script.NLots;
+
+            } else if (script.InsType === "OPT") {
+                if (script.OpType === "CE") {
+                    sumOfAllCeLots += script.NLots;
+                } else if (script.OpType === "PE") {
+                    sumOfAllPeLots += script.NLots;
+                }
+
+                if (!(script.Strike in optionQtySum)) {
+                    optionQtySum[script.Strike] = 0;
+                }
+
+                optionQtySum[script.Strike] += script.NLots;
+            }
+        });
+
+        for (const strike in optionQtySum) {
+            if (optionQtySum[strike] !== 0) {
+                isPosUnhedged = true;
+                unhedgedSummary += strike.toString() + "|";
+            }
+        }
+
+        if (sumOfAllPeLots !== futureLots || sumOfAllCeLots * -1 !== futureLots) {
+            isPosUnhedged = true;
+        }
+
+        if (isPosUnhedged) {
+            if (unhedgedSummary.endsWith("|")) {
+                unhedgedSummary = unhedgedSummary.slice(0, -1);
+            }
+        }
+
+        return { unhedgedSummary: unhedgedSummary, isPosUnhedged: isPosUnhedged, futureLots: futureLots, sumOfAllCeLots: sumOfAllCeLots, sumOfAllPeLots: sumOfAllPeLots };
+    }
+
+    useEffect(() => {
+        // call setBaseScripts with all the base scripts in row data
+        const allBaseScripts = rowData.map(row => row.BaseScriptName);
+        setBaseScripts(allBaseScripts);
+    }, [rowData.length]);
 
     return (
         <div style={containerStyle}>

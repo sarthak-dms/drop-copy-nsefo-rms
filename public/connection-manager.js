@@ -45,13 +45,13 @@ class ConnectionManager {
                     this.notifyStatusChange();
 
                     // Start ping loop
+                    let prevTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
                     this.sendLoopInterval = setInterval(() => {
                         if (this.isConnected) {
-                            const now = new Date();
-                            const timeString = now.toTimeString().split(' ')[0];
-                            this.sendMessage(`Ping at ${timeString}`, tCodes.SEND_LIVE_DATA);
+                            this.sendMessage(`PingAt=${prevTime}`, tCodes.SEND_LIVE_DATA);
+                            prevTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
                         }
-                    }, 2000);
+                    }, 3000);
 
                     if (!this.isRcvThreadWorking) {
                         this.receiveMessage();

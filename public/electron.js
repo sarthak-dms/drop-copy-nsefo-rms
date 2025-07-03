@@ -3,6 +3,7 @@ import path from 'path';
 import { initialize } from '@electron/remote/main/index.js';
 import { fileURLToPath } from 'url';
 import ConnectionManager from './connection-manager.js';
+import isDev from 'electron-is-dev';
 
 initialize();
 
@@ -10,6 +11,7 @@ let mainWindow;
 let connectionManager = null;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// const isDev = !app.isPackaged;
 
 console.log('Starting Electron app...');
 function createWindow() {
@@ -26,7 +28,12 @@ function createWindow() {
         },
     });
 
-    mainWindow.loadURL('http://localhost:3000');
+    if (isDev) {
+        mainWindow.loadURL('http://localhost:3000');
+    } else {
+        // mainWindow.loadFile(path.join(__dirname, 'index.html')); // adjust path if electron.js is in public/
+        mainWindow.loadURL(`file://${path.join(__dirname, '../build/index.html')}`);
+    }
     mainWindow.webContents.openDevTools();
 }
 
@@ -62,7 +69,7 @@ ipcMain.handle('socket-init', async (event, { ip, port }) => {
         if (connectionManager) {
             connectionManager.disconnect();
         }
-        
+
         connectionManager = new ConnectionManager(ip, port);
         console.log('New connection created', connectionManager);
 
@@ -70,21 +77,21 @@ ipcMain.handle('socket-init', async (event, { ip, port }) => {
         connectionManager.onStatusChange = (status) => {
             mainWindow.webContents.send('socket-status-changed', status);
         };
-        
+
         connectionManager.onMessage = (message) => {
             mainWindow.webContents.send('socket-message-received', message);
         };
-        
+
         connectionManager.onError = (error) => {
             mainWindow.webContents.send('socket-error', error);
         };
-        
+
         connectionManager.onLog = (log) => {
             mainWindow.webContents.send('socket-log', log);
         };
-        
+
         connectionManager.init();
-        
+
         return { success: true, message: 'Connection initialized' };
     } catch (error) {
         console.error('[socket-init] Cannot connect to socket', connectionManager);
@@ -136,5 +143,34 @@ ipcMain.handle('socket-disconnect', async () => {
         return { success: true };
     } catch (error) {
         return { success: false, message: error.message };
+    }
+});
+
+ipcMain.handle('add-logs', async (event, logMessage) => {
+    try {
+        const exeDir = path.dirname(app.getPath('exe'));
+
+        const logsDir = path.join(exeDir, 'logs');
+
+        if (!fs.existsSync(logsDir)) {
+            fs.mkdirSync(logsDir);
+        }
+
+        const today = new Date();
+        const dateFolderName = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+        const dateDir = path.join(logsDir, dateFolderName);
+
+        if (!fs.existsSync(dateDir)) {
+            fs.mkdirSync(dateDir);
+        }
+
+        const logFile = path.join(dateDir, 'logs.txt');
+
+        const timestamp = today.toLocaleTimeString('en-GB');
+        const formattedMessage = `[${timestamp}] ${logMessage}\n`;
+
+        fs.appendFileSync(logFile, formattedMessage, 'utf8');
+    } catch (error) {
+        return `Error writing log: ${error.message}`;
     }
 });
